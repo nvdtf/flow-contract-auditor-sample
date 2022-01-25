@@ -1,0 +1,24 @@
+{
+	"emulators": {},
+	"contracts": {
+		"FlowContractAudits": {
+			"source": "contract/FlowContractAudits.cdc",
+			"aliases": {
+				"testnet" : "e6c26d809a892c80",
+				"mainnet" : "e467b9dd11fa00df"
+			}
+		}
+	},
+	"networks": {		
+		"emulator": "127.0.0.1:3569",
+		"mainnet": "access.mainnet.nodes.onflow.org:9000",
+		"testnet": "access.devnet.nodes.onflow.org:9000"
+	},
+	"accounts": {		
+		"auditor": {
+			"address": "a6cd6531c4f72c4f",
+			"key": ""
+		}
+	},
+	"deployments": {}
+}

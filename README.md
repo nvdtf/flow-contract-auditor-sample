@@ -69,4 +69,10 @@ flow scripts execute scripts/hash_code.cdc \
   --network testnet
 ```
 
+## Checking Audited Code
+
+```bash
+flow transactions get 8948b98424f7fb8c597a7239d140a605cf92437113e11f61c9899152a9e158f9 --network testnet --include code
+```
+
 

@@ -2,6 +2,15 @@
 
 Demonstrates how a Flow contract auditor can use Flow CLI to generate and manage contract deployment vouchers.
 
+## Contract Addresses 
+
+|Name|Testnet|Mainnet|
+|----|-------|-------|
+|[FlowContractAudits](contracts/NFTStorefront.cdc)|[0xe6c26d809a892c80](https://flow-view-source.com/testnet/account/0xe6c26d809a892c80/contract/FlowContractAudits)|[0xe467b9dd11fa00df](https://flow-view-source.com/mainnet/account/0xe467b9dd11fa00df/)|
+
+## Requirements 
+jq command-line JSON processor: https://stedolan.github.io/jq/ 
+
 ## Setup
 
 1. Insert your account address and key into [flow.json](flow.json) account settings.

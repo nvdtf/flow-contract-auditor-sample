@@ -3,8 +3,7 @@
 	"contracts": {
 		"FlowContractAudits": {
 			"source": "contract/FlowContractAudits.cdc",
-			"aliases": {
-				"testnet" : "e6c26d809a892c80",
+			"aliases": {				
 				"mainnet" : "e467b9dd11fa00df"
 			}
 		}
@@ -15,9 +14,15 @@
 		"testnet": "access.devnet.nodes.onflow.org:9000"
 	},
 	"accounts": {		
-		"auditor": {
-			"address": "a6cd6531c4f72c4f",
-			"key": ""
+		"contract-auditor": {
+			"address": "fe011cd20b86c5c6",
+			"key": {
+				"type": "hex",
+				"index": 0,
+				"signatureAlgorithm": "ECDSA_P256",
+				"hashAlgorithm": "SHA3_256",
+				"privateKey": "xxx"
+			}
 		}
 	},
 	"deployments": {}

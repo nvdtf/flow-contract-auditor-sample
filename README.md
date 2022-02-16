@@ -2,14 +2,18 @@
 
 Demonstrates how a Flow contract auditor can use Flow CLI to generate and manage contract deployment vouchers.
 
-## Contract Addresses 
-
-|Name|Testnet|Mainnet|
-|----|-------|-------|
-|[FlowContractAudits](contracts/NFTStorefront.cdc)|[0xe6c26d809a892c80](https://flow-view-source.com/testnet/account/0xe6c26d809a892c80/contract/FlowContractAudits)|[0xe467b9dd11fa00df](https://flow-view-source.com/mainnet/account/0xe467b9dd11fa00df/)|
+Currently, contract deployment access is limited to a specific set of accounts on Flow mainnet. To further open up access, we've introduced contract audit vouchers. If a contract code hash has an associated audit voucher, it can be deployed to the network by anyone (to a determinstic account specified in the voucher). To generate audit vouchers you need to get authorized for `Auditor` access first. You can then use the transaction templates in this repository to get started generating vouchers.
 
 ## Requirements 
-jq command-line JSON processor: https://stedolan.github.io/jq/ 
+
+* [jq](https://stedolan.github.io/jq/) command-line JSON processor
+   ```bash
+   brew install jq
+   ```
+* [Flow CLI](https://github.com/onflow/flow-cli)
+   ```bash
+   brew install flow-cli
+   ```
 
 ## Setup
 
@@ -17,9 +21,9 @@ jq command-line JSON processor: https://stedolan.github.io/jq/
 
 2. Initialize your account with `AuditorProxy`:
     ```bash
-    flow transactions send transactions/init.cdc \
-      --network testnet \
-      --signer auditor
+    flow transactions send transactions/init_auditor_proxy.cdc \
+      --signer contract-auditor \
+      --network mainnet
     ```
 3. The administrator can now authorize access by depositing an `Auditor` capability into your account.
 
@@ -27,15 +31,19 @@ jq command-line JSON processor: https://stedolan.github.io/jq/
 
 ### Non-Recurrent (default)
 
-Default expiry on [new_audit.cdc](transactions/new_audit.cdc) for single-use vouchers is 30 days.
+Default expiry on [new_audit.cdc](transactions/new_audit.cdc) for single-use vouchers is 30 days. 
+
+The arguments passed are the target account address and contract code.
 
   ```bash
   flow transactions send transactions/new_audit.cdc \
     0xa6cd6531c4f72c4f \
     "$(jq -R -s '.' < audits/sample_contract.cdc)" \
-    --network testnet \
-    --signer auditor
+    --network mainnet \
+    --signer contract-auditor
   ```
+
+The resulting transaction should contain a `A.e467b9dd11fa00df.FlowContractAudits.VoucherCreated` event with associated voucher data.
 
 ### Recurrent
 
@@ -46,14 +54,41 @@ Default expiry is none.
   ```bash
   flow transactions send transactions/new_recurrent_audit.cdc \
     "$(jq -R -s '.' < audits/sample_contract.cdc)" \
-    --network testnet \
-    --signer auditor
+    --network mainnet \
+    --signer contract-auditor
   ```
+
+The resulting transaction should contain a `A.e467b9dd11fa00df.FlowContractAudits.VoucherCreated` event with associated voucher data.
+
+### Hashed Non-Recurrent (advanced)
+
+This is the same as non-recurrent vouchers, but the audit transaction only contains the code hash (not the full contract source code).
+
+This can be useful in two ways:
+* Contracts that must not leak any information before deployment. The voucher is accessible by anyone, so it's possible
+ for others to find out about an upcoming contract before deployment. The hashed voucher will not contain the full code
+ on the audit transaction.
+* Contracts that are too large to pass in one transaction.
+
+Ideally, the non-hashed voucher generation transaction should be used, because it greatly helps the developer debug any issues due to 
+code mismatch.
+
+  ```bash
+  flow transactions send transactions/new_audit_hashed.cdc \
+    0xa6cd6531c4f72c4f \
+    b4f6e303b74c0531c5e482d72719197732b80695684db999f70c244ec0da92c1 \
+    --network mainnet \
+    --signer contract-auditor
+  ```
+
+The resulting transaction should contain a `A.e467b9dd11fa00df.FlowContractAudits.VoucherCreated` event with associated voucher data.
 
 ## Getting All Vouchers
 
+Returns list of currently active vouchers.
+
 ```bash
-flow scripts execute scripts/get_vouchers.cdc --network testnet
+flow scripts execute scripts/get_vouchers.cdc --network mainnet
 ```
 
 ## Deleting Vouchers
@@ -63,25 +98,35 @@ The voucher key format is:
 * `any-codehash` for recurrent vouchers
 * `address-codehash` for non-recurrent vouchers
 
+You can also use the get all vouchers script above to access the list of keys.
+
 ```bash
   flow transactions send transactions/remove_audit.cdc \
   "0xa6cd6531c4f72c4f-36f028580bb02cc8272a9a020f4200e346e276ae664e45ee80745574e2f5ab80" \
-  --network testnet \
-  --signer auditor
+  --network mainnet \
+  --signer contract-auditor
 ```
 
+The resulting transaction should contain a `A.e467b9dd11fa00df.FlowContractAudits.VoucherRemoved` event with associated voucher data.
+
 ## Checking Contract Hash
+
+You can also use online tools like [this](https://emn178.github.io/online-tools/sha3_256_checksum.html).
+
+Contract code is hashed using SHA3-256.
 
 ```bash
 flow scripts execute scripts/hash_code.cdc \
   "$(jq -R -s '.' < audits/sample_contract.cdc)" \
-  --network testnet
+  --network mainnet
 ```
 
 ## Checking Audited Code
 
 ```bash
-flow transactions get 8948b98424f7fb8c597a7239d140a605cf92437113e11f61c9899152a9e158f9 --network testnet --include code
+flow transactions get d159a1b838a1b541f4b4a39be1056989637be753546dfec93c62cff4f9ae8a85 --network mainnet --include code
 ```
+
+If the voucher was generated by full contract code, the code can be accessed on the audit transaction. This will help developers solve any voucher mismatch they might experience due to different code hashes.
 
 

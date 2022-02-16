@@ -10,14 +10,13 @@
 
   `address`: Target account address for deployment.
 
-  `code`: Full source code of the audited contract. The code will be 
-          hashed and checked against future contract deployments.
+  `codeHash`: SHA3-256 hash of the contract.
 
 */
 
 import FlowContractAudits from "../contract/FlowContractAudits.cdc"
 
-transaction(address: Address, code: String) {
+transaction(address: Address, codeHash: String) {
     
     let auditorCapability: &FlowContractAudits.AuditorProxy
 
@@ -31,6 +30,6 @@ transaction(address: Address, code: String) {
         // ~30 days (1s avg block time)
         let defaultExpiryOffset: UInt64 = 30 * 24 * 60 * 60
         
-        self.auditorCapability.addVoucher(address: address, recurrent: false, expiryOffset: defaultExpiryOffset, code: code)        
+        self.auditorCapability.addVoucherHashed(address: address, recurrent: false, expiryOffset: defaultExpiryOffset, codeHash: codeHash)        
     }
 }

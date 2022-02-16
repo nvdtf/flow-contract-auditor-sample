@@ -68,34 +68,36 @@ pub contract FlowContractAudits {
     // Auditors can create new vouchers and remove them
     pub resource Auditor {
 
-        // Create new voucher
+        // Create new voucher with contract code
         pub fun addVoucher(address: Address?, recurrent: Bool, expiryOffset: UInt64?, code: String) {
+            let codeHash = FlowContractAudits.hashContractCode(code)
+            self.addVoucherHashed(address: address, recurrent: recurrent, expiryOffset: expiryOffset, codeHash: codeHash)
+        }
+
+        // Create new voucher with hashed contract code
+        pub fun addVoucherHashed(address: Address?, recurrent: Bool, expiryOffset: UInt64?, codeHash: String) {
 
             // calculate expiry block height based on expiryOffset
             var expiryBlockHeight: UInt64? = nil
             if expiryOffset != nil {
                 expiryBlockHeight = getCurrentBlock().height + expiryOffset!
             }
-
-            let codeHash = FlowContractAudits.hashContractCode(code)
+            
             let key = FlowContractAudits.generateVoucherKey(address: address, codeHash: codeHash)
+
+            // if a voucher with the same key exists, remove it first
+            FlowContractAudits.deleteVoucher(key)
 
             let voucher = AuditVoucher(address: address, recurrent: recurrent, expiryBlockHeight: expiryBlockHeight, codeHash: codeHash)            
 
-            let prevAudit = FlowContractAudits.vouchers.insert(key: key, voucher)
-            if prevAudit != nil {
-                emit VoucherRemoved(key: key, recurrent: prevAudit!.recurrent, expiryBlockHeight: prevAudit!.expiryBlockHeight)
-            }
+            FlowContractAudits.vouchers.insert(key: key, voucher)            
 
             emit VoucherCreated(address: address, recurrent: recurrent, expiryBlockHeight: expiryBlockHeight, codeHash: codeHash)
         }
 
         // Remove a voucher with given key
         pub fun deleteVoucher(key: String) {
-            let v = FlowContractAudits.vouchers.remove(key: key)
-            if v != nil {
-                emit VoucherRemoved(key: key, recurrent: v!.recurrent, expiryBlockHeight: v!.expiryBlockHeight)
-            }
+            FlowContractAudits.deleteVoucher(key)            
         }
     }
 
@@ -116,6 +118,10 @@ pub contract FlowContractAudits {
 
         pub fun addVoucher(address: Address?, recurrent: Bool, expiryOffset: UInt64?, code: String) {
             self.auditorCapability!.borrow()!.addVoucher(address: address, recurrent: recurrent, expiryOffset: expiryOffset, code: code)
+        }
+
+        pub fun addVoucherHashed(address: Address?, recurrent: Bool, expiryOffset: UInt64?, codeHash: String) {
+            self.auditorCapability!.borrow()!.addVoucherHashed(address: address, recurrent: recurrent, expiryOffset: expiryOffset, codeHash: codeHash)
         }
 
         pub fun deleteVoucher(key: String) {
@@ -147,8 +153,7 @@ pub contract FlowContractAudits {
                 let v = FlowContractAudits.vouchers[key]!
                 if v.expiryBlockHeight != nil {
                     if getCurrentBlock().height > v.expiryBlockHeight! {
-                        FlowContractAudits.vouchers.remove(key: key)
-                        emit VoucherRemoved(key: key, recurrent: v.recurrent, expiryBlockHeight: v.expiryBlockHeight)                
+                        FlowContractAudits.deleteVoucher(key)                        
                     }
                 }
             }
@@ -177,37 +182,42 @@ pub contract FlowContractAudits {
         let v = FlowContractAudits.vouchers[key]!
 
         // ensure contract code matches the voucher
-        if v.codeHash == codeHash  {
-
-            // if expiryBlockHeight is set, check the current block height
-            // and remove/expire the voucher if not within the acceptable range
-            if v.expiryBlockHeight != nil {
-                if getCurrentBlock().height > v.expiryBlockHeight! {
-                    FlowContractAudits.vouchers.remove(key: key)
-                    emit VoucherRemoved(key: key, recurrent: v.recurrent, expiryBlockHeight: v.expiryBlockHeight)
-                    return false
-                }
-            }
-
-            // remove the voucher if not recurrent
-            if !v.recurrent {
-                FlowContractAudits.vouchers.remove(key: key)
-                emit VoucherRemoved(key: key, recurrent: v.recurrent, expiryBlockHeight: v.expiryBlockHeight)                    
-            }
-                
-            emit VoucherUsed(address: address, key: key, recurrent: v.recurrent, expiryBlockHeight: v.expiryBlockHeight)                
-            return true
+        if v.codeHash != codeHash  {
+            return false
         }
 
-        return false
+        // if expiryBlockHeight is set, check the current block height
+        // and remove/expire the voucher if not within the acceptable range
+        if v.expiryBlockHeight != nil {
+            if getCurrentBlock().height > v.expiryBlockHeight! {
+                FlowContractAudits.deleteVoucher(key)                
+                return false
+            }
+        }
+
+        // remove the voucher if not recurrent
+        if !v.recurrent {
+            FlowContractAudits.deleteVoucher(key)
+        }
+                
+        emit VoucherUsed(address: address, key: key, recurrent: v.recurrent, expiryBlockHeight: v.expiryBlockHeight)                
+        return true
+    }
+
+    // Helper function to remove a voucher with given key
+    access(contract) fun deleteVoucher(_ key: String) {
+        let v = FlowContractAudits.vouchers.remove(key: key)
+        if v != nil {
+            emit VoucherRemoved(key: key, recurrent: v!.recurrent, expiryBlockHeight: v!.expiryBlockHeight)
+        }
     }
 
     init() {
         self.vouchers = {}
 
-        self.AdminStoragePath = /storage/contractAuditAdmin
-        self.AuditorProxyStoragePath = /storage/contractAuditorProxy
-        self.AuditorProxyPublicPath = /public/contractAuditorProxy
+        self.AdminStoragePath = /storage/flowContractAuditVouchersAdmin
+        self.AuditorProxyStoragePath = /storage/flowContractAuditVouchersAuditorProxy
+        self.AuditorProxyPublicPath = /public/flowContractAuditVouchersAuditorProxy
 
         let admin <- create Administrator()
         self.account.save(<-admin, to: self.AdminStoragePath)

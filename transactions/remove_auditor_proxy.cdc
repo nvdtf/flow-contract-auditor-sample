@@ -1,9 +1,6 @@
 /**
 
-  Initialize the auditor account by creating an empty AuditorProxy.
-
-  After this transaction, the admin will have to run admin/authorize_auditor.cdc
-  to deposit an Auditor capability into the proxy.
+  Removes AuditorProxy from account.
 
 */
 

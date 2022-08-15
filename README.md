@@ -25,6 +25,7 @@ Currently, contract deployment access is limited to a specific set of accounts o
       --signer contract-auditor \
       --network mainnet
     ```
+   >Make sure the init transaction succeeds. If you're initializing a new account, you might need to deposit some FLOW tokens before running the init transaction.
 3. The administrator can now authorize access by depositing an `Auditor` capability into your account.
 
 ## Generating Vouchers
